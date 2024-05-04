@@ -1,0 +1,2 @@
+# eosio.rewards
+EOS Rewards
