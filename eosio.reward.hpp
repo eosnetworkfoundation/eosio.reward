@@ -66,6 +66,7 @@ namespace eosio {
         struct [[eosio::table("settings")]] settings_row {
             uint32_t            epoch_time_interval = 600; // 10 minutes
             time_point_sec      next_epoch_timestamp;
+            int64_t             annual_rate = 150; // 1.5% annual rate
         };
         typedef eosio::singleton< "settings"_n, settings_row > settings_table;
 
@@ -73,9 +74,12 @@ namespace eosio {
          * Initialize the contract with the epoch period.
          *
          * @param epoch_period - epoch period in seconds
+         * @param annual_rate - Annual rate of the core token supply.
+         *     (eg. For 5% Annual rate => annual_rate=500
+         *          For 1.5% Annual rate => annual_rate=150
          */
         [[eosio::action]]
-        void init( const uint32_t epoch_period );
+        void init( const uint32_t epoch_period, const int64_t annual_rate );
 
         /**
          * Set a strategy with a weight.
@@ -123,5 +127,6 @@ namespace eosio {
 
     private:
         void update_next_epoch();
+        asset calculate_amount_to_distribute();
     };
 } /// namespace eosio

@@ -3,12 +3,16 @@
 namespace eosio {
 
 [[eosio::action]]
-void reward::init( const uint32_t epoch_time_interval ) {
+void reward::init( const uint32_t epoch_time_interval, const int64_t annual_rate ) {
     require_auth( get_self() );
 
     settings_table _settings( get_self(), get_self().value );
     auto settings = _settings.get_or_default();
+
+    check( annual_rate >= 0, "annual_rate must be positive value");
+
     settings.epoch_time_interval = epoch_time_interval;
+    settings.annual_rate = annual_rate;
     _settings.set(settings, get_self());
 }
 
@@ -61,9 +65,11 @@ void reward::distribute()
 
     // distributing rewards in EOS
     const asset balance = eosio::token::get_balance( "eosio.token"_n, get_self(), symbol_code("EOS") );
+    const asset to_distribute = calculate_amount_to_distribute();
+    check( balance.amount >= to_distribute.amount, "insufficient balance to distribute");
 
     for ( auto& row : _strategies ) {
-        const asset reward_to_distribute = balance * row.weight / total_weight;
+        const asset reward_to_distribute = to_distribute * row.weight / total_weight;
         if (reward_to_distribute.amount <= 0) continue; // skip if no fee to distribute
 
         // dispatch actions
@@ -93,6 +99,17 @@ void reward::update_next_epoch()
     // update next epoch (round to the next interval)
     settings.next_epoch_timestamp = time_point_sec( (now / interval) * interval + interval );
     _settings.set( settings, get_self() );
+}
+
+asset reward::calculate_amount_to_distribute()
+{
+    reward::settings_table _settings( get_self(), get_self().value );
+    auto settings = _settings.get();
+
+    // annual rate is based on 1 year
+    // maximum & minimum distribution is based on epoch time interval
+    const asset supply = eosio::token::get_supply( "eosio.token"_n, symbol_code("EOS") );
+    return settings.epoch_time_interval * supply * settings.annual_rate / (86400 * 365) / 10000;
 }
 
 } /// namespace eosio

@@ -66,14 +66,14 @@ describe(reward_contract, () => {
     })
 
     test('eosio.reward::init', async () => {
-        await contracts.reward.actions.init([TEN_MINUTES]).send() // 1.5% annual rate of active supply
+        await contracts.reward.actions.init([TEN_MINUTES, 150]).send() // 1.5% annual rate of active supply
     })
 
     test("eosio.reward::setstrategy", async () => {
         await contracts.reward.actions.setstrategy(['eosio.rex', 10000]).send(); // 100%
     });
 
-    test.skip("eosio.reward::distibute", async () => {
+    test("eosio.reward::distibute", async () => {
         incrementTime();
         const before = {
             reward: {
@@ -98,7 +98,7 @@ describe(reward_contract, () => {
         expect(after.reward.balance - before.reward.balance).toBe(-5993150)
     });
 
-    test.skip('eosio.reward::distibute::error - epoch not finished', async () => {
+    test('eosio.reward::distibute::error - epoch not finished', async () => {
         const action = contracts.reward.actions.distribute([]).send();
         await expectToThrow(action, 'eosio_assert: epoch not finished')
     })
