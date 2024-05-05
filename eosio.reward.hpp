@@ -11,6 +11,7 @@ namespace eosio {
 
     const set<name> STRATEGIES = {
         "eosio.rex"_n,
+        "eosio.bonds"_n,
     };
     /**
      * The `eosio.reward` contract handles system reward distribution.

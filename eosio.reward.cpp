@@ -76,9 +76,13 @@ void reward::distribute()
         eosiosystem::system_contract::donatetorex_action donatetorex( "eosio"_n, { get_self(), "active"_n });
         eosio::token::transfer_action transfer( "eosio.token"_n, { get_self(), "active"_n });
 
-        // Donate to REX - Distributes rewards to REX pool which is distributed to REX holders over a 30 day period
+        // Donate to REX
         if ( row.strategy == "eosio.rex"_n) {
             donatetorex.send( get_self(), reward_to_distribute, "staking rewards" );
+
+        // EOS T-Bonds
+        } else if ( row.strategy == "eosio.bonds"_n) {
+            transfer.send( get_self(), "eosio.bonds"_n, reward_to_distribute, "staking rewards" );
 
         } else {
             check( false, "strategy not defined");
@@ -108,8 +112,18 @@ asset reward::calculate_amount_to_distribute()
 
     // annual rate is based on 1 year
     // maximum & minimum distribution is based on epoch time interval
+    const int64_t precision = 10000; // 2 decimal points
+    const int64_t year = 86400 * 365;
     const asset supply = eosio::token::get_supply( "eosio.token"_n, symbol_code("EOS") );
-    return settings.epoch_time_interval * supply * settings.annual_rate / (86400 * 365) / 10000;
+
+    // explain the formula:
+    // supply = 2100000000.0000 EOS
+    // annual_rate = 150 => 1.5%
+    // epoch_time_interval = 600 => 10 minutes
+    // year = 86400 * 365 => 1 year
+    // precision = 10000 => 2 decimal points
+    // (2100000000 * 150 * 600) / (86400 * 365) / 10000 = 599.3150 EOS
+    return (supply * settings.annual_rate * settings.epoch_time_interval) / year / precision;
 }
 
 } /// namespace eosio

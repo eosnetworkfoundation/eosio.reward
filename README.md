@@ -10,7 +10,19 @@ The `eosio.reward` contract is designed to distribute a linear amount of rewards
 
 | Strategy      | Description |
 | ------------- | ----------- |
-| `eosio.rex` | Donate to REX - Distributes rewards to REX pool which is distributed to REX holders over a 30 day period |
+| `eosio.rex` | Donate to REX - Distributes rewards to REX pool which is distributed to REX holders by staking for 21 days |
+| `eosio.bonds` | Donate to Bonds - Distributes rewards to Bonds pool which is distributed to Bonds holders from 4 weeks up to 1 year |
+
+## Explain the formula
+
+```toml
+supply = 2100000000.0000 EOS
+annual_rate = 150 => 1.5%
+epoch_time_interval = 600 => 10 minutes
+year = 86400 * 365 => 1 year
+precision = 10000 => 2 decimal points
+(2100000000 * 150 * 600) / (86400 * 365) / 10000 = 599.3150 EOS
+```
 
 ## Development and Testing
 

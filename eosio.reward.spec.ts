@@ -6,8 +6,9 @@ import { TimePointSec } from "@greymass/eosio";
 // Vert EOS VM
 const blockchain = new Blockchain()
 const rex = 'eosio.rex'
+const bonds = 'eosio.bonds'
 const bob = 'bob'
-blockchain.createAccounts(rex, bob)
+blockchain.createAccounts(rex, bob, bonds)
 
 const reward_contract = 'eosio.reward'
 const contracts = {
@@ -70,10 +71,10 @@ describe(reward_contract, () => {
     })
 
     test("eosio.reward::setstrategy", async () => {
-        await contracts.reward.actions.setstrategy(['eosio.rex', 10000]).send(); // 100%
+        await contracts.reward.actions.setstrategy(['eosio.rex', 100]).send(); // 100%
     });
 
-    test("eosio.reward::distibute", async () => {
+    test("eosio.reward::distibute - 100% to rex", async () => {
         incrementTime();
         const before = {
             reward: {
@@ -95,6 +96,40 @@ describe(reward_contract, () => {
 
         // EOS
         expect(after.rex.balance - before.rex.balance).toBe(5993150)
+        expect(after.reward.balance - before.reward.balance).toBe(-5993150)
+    });
+
+    test("eosio.reward::distibute - 90/10% to rex/bonds", async () => {
+        incrementTime();
+        await contracts.reward.actions.setstrategy(['eosio.bonds', 10]).send(); // 10%
+        await contracts.reward.actions.setstrategy(['eosio.rex', 90]).send(); // 90%
+        const before = {
+            reward: {
+                balance: getTokenBalance(reward_contract, 'EOS'),
+            },
+            rex: {
+                balance: getTokenBalance(rex, 'EOS'),
+            },
+            bonds: {
+                balance: getTokenBalance(bonds, 'EOS'),
+            },
+        }
+        await contracts.reward.actions.distribute([]).send();
+        const after = {
+            reward: {
+                balance: getTokenBalance(reward_contract, 'EOS'),
+            },
+            rex: {
+                balance: getTokenBalance(rex, 'EOS'),
+            },
+            bonds: {
+                balance: getTokenBalance(bonds, 'EOS'),
+            },
+        }
+
+        // EOS
+        expect(after.rex.balance - before.rex.balance).toBe(5393835)
+        expect(after.bonds.balance - before.bonds.balance).toBe(599315)
         expect(after.reward.balance - before.reward.balance).toBe(-5993150)
     });
 
