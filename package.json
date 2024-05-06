@@ -1,7 +1,7 @@
 {
     "type": "module",
     "scripts": {
-        "build": "cdt-cpp eosio.reward.cpp -I ./include",
+        "build": "cdt-cpp eosio.reward.cpp -I ./external",
         "test": "bun test"
     },
     "dependencies": {

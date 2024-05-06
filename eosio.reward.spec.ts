@@ -1,20 +1,21 @@
-import { Asset, Int64, Name } from '@wharfkit/antelope'
+import { Asset, Name } from '@wharfkit/antelope'
 import { describe, expect, test } from 'bun:test'
 import { Blockchain, expectToThrow } from '@eosnetwork/vert'
-import { TimePointSec } from "@greymass/eosio";
 
 // Vert EOS VM
 const blockchain = new Blockchain()
 const rex = 'eosio.rex'
 const bonds = 'eosio.bonds'
+const saving = 'eosio.saving'
 const bob = 'bob'
-blockchain.createAccounts(rex, bob, bonds)
+blockchain.createAccounts(rex, bob, bonds, "eosio")
 
 const reward_contract = 'eosio.reward'
 const contracts = {
     reward: blockchain.createContract(reward_contract, reward_contract, true),
     token: blockchain.createContract('eosio.token', 'external/eosio.token/eosio.token', true),
     system: blockchain.createContract('eosio', 'external/eosio.system/eosio', true),
+    saving: blockchain.createContract(saving, 'external/eosio.saving/eosio.saving', true),
     fake: {
         token: blockchain.createContract('fake.token', 'external/eosio.token/eosio.token', true),
     },
@@ -38,36 +39,21 @@ function getStrategies() {
     return row;
 }
 
-function getRamBytes(account: string) {
-    const scope = Name.from(account).value.value
-    const row = contracts.system.tables
-        .userres(scope)
-        .getTableRow(scope)
-    if (!row) return 0
-    return Int64.from(row.ram_bytes).toNumber()
-}
-
-const TEN_MINUTES = 600;
-
-function incrementTime(seconds = TEN_MINUTES) {
-    const time = TimePointSec.fromInteger(seconds);
-    return blockchain.addTime(time);
-}
-
 describe(reward_contract, () => {
     test('eosio::init', async () => {
         await contracts.system.actions.init([]).send()
+    })
+
+    test('eosio::saving', async () => {
+        await contracts.saving.actions.setdistrib([[{account: "eosio.reward", percent: 10000}]]).send()
     })
 
     test('eosio.token::issue::EOS', async () => {
         const supply = `2100000000.0000 EOS`
         await contracts.token.actions.create(['eosio.token', supply]).send()
         await contracts.token.actions.issue(['eosio.token', supply, '']).send()
-        await contracts.token.actions.transfer(['eosio.token', reward_contract, '350000000.0000 EOS', '']).send();
-    })
-
-    test('eosio.reward::init', async () => {
-        await contracts.reward.actions.init([TEN_MINUTES, 150]).send() // 1.5% annual rate of active supply
+        await contracts.token.actions.transfer(['eosio.token', "eosio", '350000000.0000 EOS', '']).send();
+        await contracts.token.actions.open(['eosio.reward', "4,EOS", "eosio.token"]).send();
     })
 
     test("eosio.reward::setstrategy", async () => {
@@ -75,13 +61,16 @@ describe(reward_contract, () => {
     });
 
     test("eosio.reward::distibute - 100% to rex", async () => {
-        incrementTime();
+        await contracts.token.actions.transfer(['eosio', "eosio.saving", '1000.0000 EOS', '']).send();
         const before = {
             reward: {
                 balance: getTokenBalance(reward_contract, 'EOS'),
             },
             rex: {
                 balance: getTokenBalance(rex, 'EOS'),
+            },
+            saving: {
+                balance: getTokenBalance(saving, 'EOS'),
             },
         }
         await contracts.reward.actions.distribute([]).send();
@@ -92,15 +81,19 @@ describe(reward_contract, () => {
             rex: {
                 balance: getTokenBalance(rex, 'EOS'),
             },
+            saving: {
+                balance: getTokenBalance(saving, 'EOS'),
+            },
         }
 
         // EOS
-        expect(after.rex.balance - before.rex.balance).toBe(5993150)
-        expect(after.reward.balance - before.reward.balance).toBe(-5993150)
+        expect(after.rex.balance - before.rex.balance).toBe(10000000)
+        expect(after.saving.balance - before.saving.balance).toBe(-10000000)
+        expect(after.reward.balance - before.reward.balance).toBe(0)
     });
 
     test("eosio.reward::distibute - 90/10% to rex/bonds", async () => {
-        incrementTime();
+        await contracts.token.actions.transfer(['eosio', "eosio.saving", '1000.0000 EOS', '']).send();
         await contracts.reward.actions.setstrategy(['eosio.bonds', 10]).send(); // 10%
         await contracts.reward.actions.setstrategy(['eosio.rex', 90]).send(); // 90%
         const before = {
@@ -128,18 +121,28 @@ describe(reward_contract, () => {
         }
 
         // EOS
-        expect(after.rex.balance - before.rex.balance).toBe(5393835)
-        expect(after.bonds.balance - before.bonds.balance).toBe(599315)
-        expect(after.reward.balance - before.reward.balance).toBe(-5993150)
+        expect(after.rex.balance - before.rex.balance).toBe(9000000)
+        expect(after.bonds.balance - before.bonds.balance).toBe(1000000)
+        expect(after.reward.balance - before.reward.balance).toBe(0)
     });
 
-    test('eosio.reward::distibute::error - epoch not finished', async () => {
+    test('eosio.reward::distibute::error - no balance to distribute', async () => {
         const action = contracts.reward.actions.distribute([]).send();
-        await expectToThrow(action, 'eosio_assert: epoch not finished')
+        await expectToThrow(action, 'eosio_assert: no balance to distribute')
     })
 
-    test("eosio.reward::distibute - after 10 minutes & user authority", async () => {
-        incrementTime();
-        await contracts.reward.actions.distribute([]).send(bob); // any user is authorized to call distribute
-    });
+    test('eosio.reward::delstrategy::error - strategy not found', async () => {
+        const action = contracts.reward.actions.delstrategy(["foo"]).send();
+        await expectToThrow(action, 'eosio_assert: strategy not found')
+    })
+
+    test('eosio.reward::setstrategy::error - strategy not defined', async () => {
+        const action = contracts.reward.actions.setstrategy(["foo", 100]).send();
+        await expectToThrow(action, 'eosio_assert: strategy not defined')
+    })
+
+    test('eosio.reward::setstrategy::error - weight must be greater than 0', async () => {
+        const action = contracts.reward.actions.setstrategy(["eosio.rex", 0]).send();
+        await expectToThrow(action, 'eosio_assert: weight must be greater than 0')
+    })
 })
