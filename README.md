@@ -6,7 +6,8 @@ The `eosio.reward` contract handles system reward distribution.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> eosio.saving
+    [*] --> eosio
+    eosio --> eosio.saving
     eosio.saving --> eosio.reward
     eosio.reward --> eosio.rex
     eosio.reward --> eosio.bonds
