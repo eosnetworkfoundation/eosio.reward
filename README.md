@@ -5,12 +5,14 @@
 The `eosio.reward` contract handles system reward distribution.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> eosio
-    eosio --> eosio.saving
-    eosio.saving --> eosio.reward
-    eosio.reward --> eosio.rex
-    eosio.reward --> eosio.bonds
+graph TD
+    eosio --> |unallocated bucket| eosio.saving
+    eosio.saving --> |distribution claim| eosio.reward
+    eosio.saving -.-> |distribution claim| eosio.grants
+    eosio.saving -.-> |distribution claim| eoslabs.io
+    eosio.reward --> weights{% weights}
+    weights -.-> |% Donate To REX| eosio.rex
+    weights -.-> |% Transfer| eosio.bonds
 ```
 
 ## Strategies
