@@ -12,7 +12,6 @@ graph TD
     eosio.saving -.-> |distribution claim| eoslabs.io
     eosio.reward --> weights{% weights}
     weights -.-> |% Donate To REX| eosio.rex
-    weights -.-> |% Transfer| eosio.bonds
 ```
 
 ## Strategies
@@ -22,8 +21,6 @@ The `eosio.reward` contract is designed to distribute a linear amount of rewards
 | Strategy      | Description |
 | ------------- | ----------- |
 | `eosio.rex` | Donate to REX - Distributes rewards to REX pool which is distributed to REX holders by staking for 21 days |
-| `eosio.bonds` | Donate to Bonds - Distributes rewards to Bonds pool which is distributed to Bonds holders from 4 weeks up to 1 year |
-
 
 
 ## Development and Testing
