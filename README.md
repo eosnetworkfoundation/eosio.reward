@@ -30,7 +30,7 @@ The `eosio.reward` contract is designed to distribute a linear amount of rewards
 To compile the contract, developers can use the following command:
 
 ```sh
-cdt-cpp eosio.reward.cpp -I ./include
+cdt-cpp eosio.reward.cpp -I ./include -I ./external
 ```
 
 ### Testing Framework
@@ -43,3 +43,23 @@ $ npm test
 > test
 > bun test
 ```
+
+#### Exported memory errors
+
+```
+TypeError: undefined is not an object (evaluating 'this.memory.buffer')
+```
+
+If you're using a version of CDT to build that doesn't support exported memory, you'll need to export it manually for VeRT tests to work.
+
+```bash
+# Grab wabt
+sudo apt-get install wabt
+
+# Create a temporary wat file and export the memory
+wasm2wat eosio.reward.wasm | sed -e 's|(memory |(memory (export "memory") |' > eosio.reward.wat
+wat2wasm -o eosio.reward.wasm eosio.reward.wat
+rm eosio.reward.wat
+```
+
+You can also use the `./build.sh` script that will handle building and exporting memory for you.

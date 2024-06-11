@@ -3,6 +3,7 @@
 !/external/**/*.abi
 !/external/**/*.wasm
 node_modules
+bun.lockb
 yarn.lock
 package-lock.json
 .DS_Store
