@@ -43,7 +43,7 @@ void reward::distribute()
     // any authority is allowed to call this action
 
     strategies_table _strategies( get_self(), get_self().value );
-    const uint16_t total_weight = get_total_weight();
+    const uint32_t total_weight = get_total_weight();
 
     // dispatch actions
     eosiosystem::system_contract::donatetorex_action donatetorex( "eosio"_n, { get_self(), "active"_n });

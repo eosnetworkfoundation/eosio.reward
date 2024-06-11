@@ -2,13 +2,11 @@ import { Asset, Name } from '@wharfkit/antelope'
 import { describe, expect, test } from 'bun:test'
 import { Blockchain, expectToThrow } from '@eosnetwork/vert'
 
-// Vert EOS VM
 const blockchain = new Blockchain()
 const rex = 'eosio.rex'
 const bonds = 'eosio.bonds'
 const saving = 'eosio.saving'
-const bob = 'bob'
-blockchain.createAccounts(rex, bob, bonds, "eosio")
+blockchain.createAccounts(rex, bonds, "eosio")
 
 const reward_contract = 'eosio.reward'
 const contracts = {
@@ -39,6 +37,18 @@ function getStrategies() {
     return row;
 }
 
+function getBalances(){
+    const get = (account:string) => ({
+        balance: getTokenBalance(account, 'EOS')
+    })
+    return {
+        reward: get(reward_contract),
+        rex: get(rex),
+        saving: get(saving),
+        bonds: get(bonds),
+    }
+}
+
 describe(reward_contract, () => {
     test('eosio::init', async () => {
         await contracts.system.actions.init([]).send()
@@ -62,31 +72,10 @@ describe(reward_contract, () => {
 
     test("eosio.reward::distibute - 100% to rex", async () => {
         await contracts.token.actions.transfer(['eosio', "eosio.saving", '1000.0000 EOS', '']).send();
-        const before = {
-            reward: {
-                balance: getTokenBalance(reward_contract, 'EOS'),
-            },
-            rex: {
-                balance: getTokenBalance(rex, 'EOS'),
-            },
-            saving: {
-                balance: getTokenBalance(saving, 'EOS'),
-            },
-        }
+        const before = getBalances();
         await contracts.reward.actions.distribute([]).send();
-        const after = {
-            reward: {
-                balance: getTokenBalance(reward_contract, 'EOS'),
-            },
-            rex: {
-                balance: getTokenBalance(rex, 'EOS'),
-            },
-            saving: {
-                balance: getTokenBalance(saving, 'EOS'),
-            },
-        }
+        const after = getBalances();
 
-        // EOS
         expect(after.rex.balance - before.rex.balance).toBe(10000000)
         expect(after.saving.balance - before.saving.balance).toBe(-10000000)
         expect(after.reward.balance - before.reward.balance).toBe(0)
@@ -96,31 +85,10 @@ describe(reward_contract, () => {
         await contracts.token.actions.transfer(['eosio', "eosio.saving", '1000.0000 EOS', '']).send();
         await contracts.reward.actions.setstrategy(['eosio.bonds', 10]).send(); // 10%
         await contracts.reward.actions.setstrategy(['eosio.rex', 90]).send(); // 90%
-        const before = {
-            reward: {
-                balance: getTokenBalance(reward_contract, 'EOS'),
-            },
-            rex: {
-                balance: getTokenBalance(rex, 'EOS'),
-            },
-            bonds: {
-                balance: getTokenBalance(bonds, 'EOS'),
-            },
-        }
+        const before = getBalances();
         await contracts.reward.actions.distribute([]).send();
-        const after = {
-            reward: {
-                balance: getTokenBalance(reward_contract, 'EOS'),
-            },
-            rex: {
-                balance: getTokenBalance(rex, 'EOS'),
-            },
-            bonds: {
-                balance: getTokenBalance(bonds, 'EOS'),
-            },
-        }
+        const after = getBalances();
 
-        // EOS
         expect(after.rex.balance - before.rex.balance).toBe(9000000)
         expect(after.bonds.balance - before.bonds.balance).toBe(1000000)
         expect(after.reward.balance - before.reward.balance).toBe(0)
