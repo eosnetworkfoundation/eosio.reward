@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cdt-cpp eosio.reward.cpp -I ./include -I ./external
+cdt-cpp eosio.reward.cpp -I ./include -I ./external --no-missing-ricardian-clause
 wasm2wat eosio.reward.wasm | sed -e 's|(memory |(memory (export "memory") |' > eosio.reward.wat
 wat2wasm -o eosio.reward.wasm eosio.reward.wat
 rm eosio.reward.wat
