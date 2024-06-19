@@ -30,7 +30,10 @@ The `eosio.reward` contract is designed to distribute a linear amount of rewards
 To compile the contract, developers can use the following command:
 
 ```sh
-cdt-cpp eosio.reward.cpp -I ./include -I ./external
+gh repo clone eosnetworkfoundation/eosio.reward
+cd eosio.reward
+git checkout v1.0.0-rc1
+./build.sh
 ```
 
 ### Testing Framework
